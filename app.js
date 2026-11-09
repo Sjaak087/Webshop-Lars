@@ -51,7 +51,7 @@ function showCart(){
 }
 function authForm(mode="login",message=""){
  openDialog(`<p class="eyebrow">NOVA ACCOUNT</p><h2>${mode==="login"?"Welkom terug":"Account aanmaken"}</h2><p class="muted">${safe(message)}</p><form id="authForm" class="stack"><label>E-mailadres<input type="email" id="authEmail" required autocomplete="email"></label><label>Wachtwoord<input type="password" id="authPassword" required minlength="6" autocomplete="${mode==="login"?"current-password":"new-password"}"></label><button class="primary full">${mode==="login"?"Inloggen":"Account aanmaken"}</button></form><p class="switch-auth">${mode==="login"?"Nog geen account?":"Heb je al een account?"} <button id="switchAuth" class="inline-link">${mode==="login"?"Account aanmaken":"Inloggen"}</button></p>`);
- $("#authForm").onsubmit=async e=>{e.preventDefault();try{const email=$("#authEmail").value.trim(),password=$("#authPassword").value;if(mode==="login")await signInWithEmailAndPassword(auth,email,password);else await createUserWithEmailAndPassword(auth,email,password);closeDialog();toast("Je bent ingelogd")}catch(err){toast(authError(err))}};
+ $("#authForm").onsubmit=async e=>{e.preventDefault();try{const email=$("#authEmail").value.trim(),password=$("#authPassword").value;if(mode==="login"){await signInWithEmailAndPassword(auth,email,password)}else{const credential=await createUserWithEmailAndPassword(auth,email,password);await set(ref(db,"users/"+credential.user.uid),{email:credential.user.email,createdAt:Date.now(),accountType:"customer"})}closeDialog();toast("Je bent ingelogd")}catch(err){toast(authError(err))}};
  $("#switchAuth").onclick=()=>authForm(mode==="login"?"register":"login");
 }
 function authError(e){return e.code==="auth/invalid-credential"?"E-mailadres of wachtwoord klopt niet.":e.code==="auth/email-already-in-use"?"Dit e-mailadres bestaat al.":e.code==="auth/weak-password"?"Kies een wachtwoord van minimaal 6 tekens.":e.message||"Inloggen is niet gelukt."}
@@ -113,18 +113,26 @@ async function productEditor(id=null){
 }
 $("#adminEntry").onclick=()=>{if(state.admin)adminPanel();else openAdminLogin()};
 function openAdminLogin(){
- openDialog(`<p class="eyebrow">ALLEEN VOOR BEHEERDERS</p><h2>Sitebeheer</h2><p class="muted">De beheerdergegevens worden uit beheer-config.js gelezen.</p><button class="primary full" id="adminLogin">Inloggen als beheerder</button>`);
- $("#adminLogin").onclick=async()=>{
+ openDialog(`<p class="eyebrow">ALLEEN VOOR BEHEERDERS</p><h2>Sitebeheer</h2><p class="muted">Log in met het beheerdersaccount dat in Firebase Authentication is aangemaakt.</p><form id="adminLoginForm" class="stack"><label>E-mailadres<input id="adminEmail" type="email" required autocomplete="username" value="${safe(BEHEER_CONFIG.adminEmail)}"></label><label>Wachtwoord<input id="adminPassword" type="password" required autocomplete="current-password"></label><button class="primary full">Inloggen als beheerder</button></form>`);
+ $("#adminLoginForm").onsubmit=async e=>{
+  e.preventDefault();
+  const email=$("#adminEmail").value.trim(),password=$("#adminPassword").value;
+  if(email.toLowerCase()!==BEHEER_CONFIG.adminEmail.toLowerCase()){toast("Dit e-mailadres is niet ingesteld als beheerder");return}
   try{
-   await signInWithEmailAndPassword(auth,BEHEER_CONFIG.adminEmail,BEHEER_CONFIG.adminPassword);
-   if(!isAdmin(auth.currentUser)){
-    await signOut(auth);
-    toast("Dit account heeft geen beheerrechten");
-    return;
-   }
-   closeDialog();
-   adminPanel();
+   const credential=await signInWithEmailAndPassword(auth,email,password);
+   if(!isAdmin(credential.user)){await signOut(auth);toast("Dit account heeft geen beheerrechten");return}
+   closeDialog();adminPanel();
   }catch(err){toast(authError(err))}
  };
 }
-onAuthStateChanged(auth,user=>{state.user=user;state.admin=isAdmin(user);$("#accountBtn").textContent=user?"Mijn account":"Inloggen";if(user&&state.admin)$("#adminEntry").textContent="Sitebeheer · ingelogd";else $("#adminEntry").textContent="Sitebeheer";});
+onAuthStateChanged(auth,async user=>{
+ state.user=user;state.admin=isAdmin(user);
+ $("#accountBtn").textContent=user?"Mijn account":"Inloggen";
+ $("#adminEntry").textContent=user&&state.admin?"Sitebeheer · ingelogd":"Sitebeheer";
+ if(user){
+  try{
+   const profileRef=ref(db,"users/"+user.uid),profile=await get(profileRef);
+   if(!profile.exists())await set(profileRef,{email:user.email||"",createdAt:Date.now(),accountType:state.admin?"admin":"customer"});
+  }catch(err){console.warn("Accountprofiel kon niet worden opgeslagen:",err)}
+ }
+});
