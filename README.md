@@ -25,7 +25,9 @@ Het wachtwoord zet je bewust **niet** in JavaScript. Alles wat in een website-sc
 2. Kies Get started en schakel **Email/Password** in bij Sign-in method.
 3. Open Users → Add user.
 4. Maak het account aan met het beheer-e-mailadres en een sterk wachtwoord.
-5. Gebruik deze gegevens bij Sitebeheer onderaan de webshop.
+5. Gebruik deze gegevens via de knop **Sitebeheer** in de bovenbalk.
+
+**Waarom Firebase Authentication?** Dit is de Firebase-dienst die e-mail/wachtwoordaccounts veilig beheert. De gebruikers kunnen dus in jouw Firebase-project worden teruggevonden onder Authentication → Users. Realtime Database bevat de webshopgegevens (producten, bestellingen en chats). Wachtwoorden worden niet als leesbare tekst in Realtime Database opgeslagen.
 
 Gebruikers kunnen zelf via de webshop een account maken.
 
@@ -64,3 +66,8 @@ Start in de projectmap bijvoorbeeld een lokale server:
 - De voorbeeldregels gebruiken een beheerder op basis van het geverifieerde Firebase-login-e-mailadres. De e-mailadressen in alle drie de configuratiebestanden moeten exact overeenkomen.
 - De meegeleverde basisregels zijn een startpunt. Voor een echte winkel met betalingen, voorraad, verzendlabels of persoonsgegevens is aanvullende server-side validatie nodig. Er is geen online betaalprovider aangesloten.
 - Test na het publiceren altijd met een normaal klantaccount én met het beheerdersaccount.
+
+## Waarom staat het beheerderswachtwoord niet in een script?
+Een wachtwoord in `firebase.js` of `app.js` is zichtbaar voor iedereen die de GitHub-pagina opent. Daarom staat alleen het beheer-e-mailadres in de configuratie; het wachtwoord stel je in bij Firebase Authentication. De knop Sitebeheer staat nu in de bovenste navigatiebalk.
+
+Wil je per se geen Firebase Authentication gebruiken, dan is een beveiligde server (bijvoorbeeld Firebase Cloud Functions) nodig om wachtwoorden veilig te controleren. Alleen Realtime Database + browser-JavaScript is geen veilige manier om accounts en bestellingen af te schermen. Sla nooit gewone wachtwoorden op in de database.
