@@ -3,6 +3,6 @@
 // Iedereen kan het e-mailadres en wachtwoord hieronder bekijken.
 // Gebruik dit uitsluitend als je bewust een openbare demo-login wilt.
 export const BEHEER_CONFIG = {
-  adminEmail: "beheer@jouwdomein.nl",
-  adminPassword: "VERANDER-DIT-WACHTWOORD"
+  adminEmail: "58156557@leerling.hetbouwens.nl",
+  adminPassword: "Damkau!735"
 };
