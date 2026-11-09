@@ -71,3 +71,22 @@ Start in de projectmap bijvoorbeeld een lokale server:
 Een wachtwoord in `firebase.js` of `app.js` is zichtbaar voor iedereen die de GitHub-pagina opent. Daarom staat alleen het beheer-e-mailadres in de configuratie; het wachtwoord stel je in bij Firebase Authentication. De knop Sitebeheer staat nu in de bovenste navigatiebalk.
 
 Wil je per se geen Firebase Authentication gebruiken, dan is een beveiligde server (bijvoorbeeld Firebase Cloud Functions) nodig om wachtwoorden veilig te controleren. Alleen Realtime Database + browser-JavaScript is geen veilige manier om accounts en bestellingen af te schermen. Sla nooit gewone wachtwoorden op in de database.
+
+
+## Sitebeheer instellen
+1. Open `beheer-config.js`.
+2. Pas `adminEmail` aan naar het e-mailadres van je beheeraccount.
+3. Maak het account en stel het wachtwoord in via Firebase Authentication.
+4. Gebruik hetzelfde beheerders-e-mailadres in `database.rules.json` en `storage.rules`.
+
+**Let op:** GitHub Pages is een statische website. Alles in JavaScript-bestanden is openbaar. Daarom kan een echt beheerderswachtwoord niet veilig in `beheer-config.js` staan. De wachtwoordcontrole loopt via Firebase Authentication; zo hoeft het wachtwoord niet in je websitecode te staan.
+
+
+## Sitebeheer-inloggegevens
+Open `beheer-config.js` en wijzig:
+- `adminEmail`
+- `adminPassword`
+
+De knop Sitebeheer gebruikt deze gegevens automatisch. Het bijbehorende account moet wel bestaan in Firebase Authentication en hetzelfde e-mailadres moet overeenkomen met de beheerder in `database.rules.json` en `storage.rules`.
+
+**Openbare demo-login:** omdat de website via GitHub Pages JavaScript aan bezoekers levert, kan iedereen de inhoud van `beheer-config.js` bekijken. Het wachtwoord is dus niet geheim en deze methode is niet veilig voor een echte webshop. Gebruik geen wachtwoord dat je elders gebruikt.

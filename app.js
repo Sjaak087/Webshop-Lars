@@ -1,4 +1,5 @@
-import { auth, db, storage, ADMIN_EMAIL } from "./firebase.js";
+import { auth, db, storage } from "./firebase.js";
+import { BEHEER_CONFIG } from "./beheer-config.js";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { ref, onValue, get, push, set, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
@@ -14,7 +15,7 @@ function closeDialog(){overlay.classList.add("hidden");content.innerHTML=""}
 $("#closeDialog").onclick=closeDialog; overlay.addEventListener("click",e=>{if(e.target===overlay)closeDialog()});
 const money=n=>new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR"}).format(Number(n)||0);
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const isAdmin=u=>!!u && (u.email||"").toLowerCase()===ADMIN_EMAIL;
+const isAdmin=u=>!!u && (u.email||"").toLowerCase()===BEHEER_CONFIG.adminEmail;
 
 onValue(ref(db,"products"),snap=>{
  state.products=Object.entries(snap.val()||{}).map(([id,p])=>({id,...p})).filter(p=>p.active!==false);
@@ -111,5 +112,19 @@ async function productEditor(id=null){
  $("#productForm").onsubmit=async e=>{e.preventDefault();const title=$("#pTitle").value.trim(),price=Number($("#pPrice").value),description=$("#pDescription").value.trim(),file=$("#pImage").files[0];if(!Number.isFinite(price)||price<0)return toast("Vul een geldige prijs in");try{let image=p.image||"",imagePath=p.imagePath||"";if(file){if(file.size>5*1024*1024)return toast("Afbeelding mag maximaal 5 MB zijn");if(!["image/jpeg","image/png","image/webp"].includes(file.type))return toast("Gebruik JPG, PNG of WEBP");imagePath=`products/${id||"new-"+Date.now()}/${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;const r=storageRef(storage,imagePath);await uploadBytes(r,file);image=await getDownloadURL(r)}const product={title,price,description,image,imagePath,active:true,updatedAt:Date.now()};if(id)await update(ref(db,"products/"+id),product);else await set(push(ref(db,"products")), {...product,createdAt:Date.now()});closeDialog();toast("Product opgeslagen")}catch(err){toast("Opslaan mislukt: "+err.message)}};
 }
 $("#adminEntry").onclick=()=>{if(state.admin)adminPanel();else openAdminLogin()};
-function openAdminLogin(){openDialog(`<p class="eyebrow">ALLEEN VOOR BEHEERDERS</p><h2>Sitebeheer</h2><p class="muted">Log in met het beheeraccount dat je in Firebase hebt aangemaakt.</p><form id="adminLogin" class="stack"><label>E-mailadres<input type="email" id="adminEmail" required></label><label>Wachtwoord<input type="password" id="adminPassword" required></label><button class="primary full">Inloggen als beheerder</button></form>`);$("#adminLogin").onsubmit=async e=>{e.preventDefault();try{await signInWithEmailAndPassword(auth,$("#adminEmail").value.trim(),$("#adminPassword").value);if(!isAdmin(auth.currentUser)){await signOut(auth);toast("Dit account heeft geen beheerrechten");return}closeDialog();adminPanel()}catch(err){toast(authError(err))}}}
+function openAdminLogin(){
+ openDialog(`<p class="eyebrow">ALLEEN VOOR BEHEERDERS</p><h2>Sitebeheer</h2><p class="muted">De beheerdergegevens worden uit beheer-config.js gelezen.</p><button class="primary full" id="adminLogin">Inloggen als beheerder</button>`);
+ $("#adminLogin").onclick=async()=>{
+  try{
+   await signInWithEmailAndPassword(auth,BEHEER_CONFIG.adminEmail,BEHEER_CONFIG.adminPassword);
+   if(!isAdmin(auth.currentUser)){
+    await signOut(auth);
+    toast("Dit account heeft geen beheerrechten");
+    return;
+   }
+   closeDialog();
+   adminPanel();
+  }catch(err){toast(authError(err))}
+ };
+}
 onAuthStateChanged(auth,user=>{state.user=user;state.admin=isAdmin(user);$("#accountBtn").textContent=user?"Mijn account":"Inloggen";if(user&&state.admin)$("#adminEntry").textContent="Sitebeheer · ingelogd";else $("#adminEntry").textContent="Sitebeheer";});

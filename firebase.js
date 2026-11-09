@@ -17,11 +17,6 @@ export const firebaseConfig = {
   measurementId: "G-7YTVRGHRKL"
 };
 
-// Vul het e-mailadres in dat je als beheerder gebruikt.
-// Maak dit account zelf aan via Firebase Console > Authentication > Users.
-// Zet NOOIT een wachtwoord in dit bestand.
-export const ADMIN_EMAIL = "58156557@leerling.hetbouwens.nl".toLowerCase();
-
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 await setPersistence(auth, browserLocalPersistence);
