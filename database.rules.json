@@ -1,32 +1,6 @@
 {
   "rules": {
-    ".read": false,
-    ".write": false,
-    "products": {
-      ".read": true,
-      "$productId": {
-        ".write": "auth != null && auth.token.email === 'beheer@jouwdomein.nl'"
-      }
-    },
-    "orders": {
-      ".read": "auth != null && auth.token.email === 'beheer@jouwdomein.nl'",
-      "$orderId": {
-        ".read": "auth != null && (auth.uid === data.child('userId').val() || (auth.token.email === 'beheer@jouwdomein.nl'))",
-        ".write": "auth != null && ((!data.exists() && newData.child('userId').val() === auth.uid) || (auth.token.email === 'beheer@jouwdomein.nl'))"
-      }
-    },
-    "chats": {
-      ".read": "auth != null && auth.token.email === 'beheer@jouwdomein.nl'",
-      "$chatId": {
-        ".read": "auth != null && (auth.uid === data.child('userId').val() || auth.token.email === 'beheer@jouwdomein.nl')",
-        ".write": "auth != null && ((!data.exists() && newData.child('userId').val() === auth.uid) || (auth.uid === data.child('userId').val() && newData.child('userId').val() === data.child('userId').val()) || auth.token.email === 'beheer@jouwdomein.nl')"
-      }
-    },
-    "users": {
-      "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || auth.token.email === 'beheer@jouwdomein.nl')",
-        ".write": "auth != null && auth.uid === $uid && newData.child('email').val() === auth.token.email"
-      }
-    }
+    ".read": true,
+    ".write": true
   }
-}
+}\n

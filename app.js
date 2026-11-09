@@ -1,6 +1,5 @@
-import { auth, db, storage } from "./firebase.js";
+import { db, storage } from "./firebase.js";
 import { BEHEER_CONFIG } from "./beheer-config.js";
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { ref, onValue, get, push, set, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
 
@@ -15,7 +14,7 @@ function closeDialog(){overlay.classList.add("hidden");content.innerHTML=""}
 $("#closeDialog").onclick=closeDialog; overlay.addEventListener("click",e=>{if(e.target===overlay)closeDialog()});
 const money=n=>new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR"}).format(Number(n)||0);
 const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const isAdmin=u=>!!u && (u.email||"").toLowerCase()===BEHEER_CONFIG.adminEmail;
+const isAdmin=u=>!!u && u.role==="admin";
 
 onValue(ref(db,"products"),snap=>{
  state.products=Object.entries(snap.val()||{}).map(([id,p])=>({id,...p})).filter(p=>p.active!==false);
@@ -50,13 +49,31 @@ function showCart(){
  $("#checkout")?.addEventListener("click",()=>{if(!state.user){authForm("login","Log in om je bestelling af te ronden.");return}placeOrder()});
 }
 function authForm(mode="login",message=""){
- openDialog(`<p class="eyebrow">NOVA ACCOUNT</p><h2>${mode==="login"?"Welkom terug":"Account aanmaken"}</h2><p class="muted">${safe(message)}</p><form id="authForm" class="stack"><label>E-mailadres<input type="email" id="authEmail" required autocomplete="email"></label><label>Wachtwoord<input type="password" id="authPassword" required minlength="6" autocomplete="${mode==="login"?"current-password":"new-password"}"></label><button class="primary full">${mode==="login"?"Inloggen":"Account aanmaken"}</button></form><p class="switch-auth">${mode==="login"?"Nog geen account?":"Heb je al een account?"} <button id="switchAuth" class="inline-link">${mode==="login"?"Account aanmaken":"Inloggen"}</button></p>`);
- $("#authForm").onsubmit=async e=>{e.preventDefault();try{const email=$("#authEmail").value.trim(),password=$("#authPassword").value;if(mode==="login"){await signInWithEmailAndPassword(auth,email,password)}else{const credential=await createUserWithEmailAndPassword(auth,email,password);await set(ref(db,"users/"+credential.user.uid),{email:credential.user.email,createdAt:Date.now(),accountType:"customer"})}closeDialog();toast("Je bent ingelogd")}catch(err){toast(authError(err))}};
+ openDialog(`<p class="eyebrow">NOVA ACCOUNT</p><h2>${mode==="login"?"Welkom terug":"Account aanmaken"}</h2><p class="muted">${safe(message)}</p><form id="authForm" class="stack"><label>E-mailadres<input type="email" id="authEmail" required autocomplete="email"></label><label>Wachtwoord<input type="password" id="authPassword" required autocomplete="${mode==="login"?"current-password":"new-password"}"></label><button class="primary full">${mode==="login"?"Inloggen":"Account aanmaken"}</button></form><p class="switch-auth">${mode==="login"?"Nog geen account?":"Heb je al een account?"} <button id="switchAuth" class="inline-link">${mode==="login"?"Account aanmaken":"Inloggen"}</button></p>`);
+ $("#authForm").onsubmit=async e=>{
+  e.preventDefault();
+  const email=$("#authEmail").value.trim().toLowerCase(),password=$("#authPassword").value;
+  try{
+   const usersSnap=await get(ref(db,"users"));
+   const users=Object.entries(usersSnap.val()||{});
+   if(mode==="register"){
+    if(users.some(([,u])=>(u.email||"").toLowerCase()===email)){toast("Dit e-mailadres bestaat al.");return}
+    const accountRef=push(ref(db,"users"));
+    const user={uid:accountRef.key,email,password,createdAt:Date.now(),accountType:"customer"};
+    await set(accountRef,user); state.user=user; state.admin=false;
+   }else{
+    const found=users.find(([,u])=>(u.email||"").toLowerCase()===email && u.password===password);
+    if(!found){toast("E-mailadres of wachtwoord klopt niet.");return}
+    state.user={uid:found[0],...found[1]};state.admin=false;
+   }
+   sessionStorage.setItem("novashopUser",JSON.stringify(state.user));
+   $("#accountBtn").textContent="Mijn account";closeDialog();toast(mode==="register"?"Account aangemaakt!":"Je bent ingelogd");
+  }catch(err){toast("Accountactie mislukt: "+err.message)}
+ };
  $("#switchAuth").onclick=()=>authForm(mode==="login"?"register":"login");
 }
-function authError(e){return e.code==="auth/invalid-credential"?"E-mailadres of wachtwoord klopt niet.":e.code==="auth/email-already-in-use"?"Dit e-mailadres bestaat al.":e.code==="auth/weak-password"?"Kies een wachtwoord van minimaal 6 tekens.":e.message||"Inloggen is niet gelukt."}
 $("#accountBtn").onclick=()=>state.user?accountMenu():authForm();
-function accountMenu(){openDialog(`<p class="eyebrow">MIJN ACCOUNT</p><h2>${safe(state.user.email)}</h2><div class="stack"><button class="secondary full" id="myOrders">Mijn bestellingen</button><button class="secondary full" id="myChats">Mijn chats</button><button class="secondary full" id="logout">Uitloggen</button></div>`);$("#myOrders").onclick=()=>{closeDialog();showMyOrders()};$("#myChats").onclick=()=>showMyChats();$("#logout").onclick=async()=>{await signOut(auth);state.cart=[];renderCartCount();closeDialog();toast("Je bent uitgelogd")}}
+function accountMenu(){openDialog(`<p class="eyebrow">MIJN ACCOUNT</p><h2>${safe(state.user.email)}</h2><div class="stack"><button class="secondary full" id="myOrders">Mijn bestellingen</button><button class="secondary full" id="myChats">Mijn chats</button><button class="secondary full" id="logout">Uitloggen</button></div>`);$("#myOrders").onclick=()=>{closeDialog();showMyOrders()};$("#myChats").onclick=()=>showMyChats();$("#logout").onclick=async()=>{state.user=null;state.admin=false;sessionStorage.removeItem("novashopUser");$("#accountBtn").textContent="Inloggen";state.cart=[];renderCartCount();closeDialog();toast("Je bent uitgelogd")}}
 async function placeOrder(){
  if(!state.cart.length)return;
  const total=state.cart.reduce((n,x)=>n+x.price*x.qty,0),orderRef=push(ref(db,"orders"));
@@ -113,26 +130,18 @@ async function productEditor(id=null){
 }
 $("#adminEntry").onclick=()=>{if(state.admin)adminPanel();else openAdminLogin()};
 function openAdminLogin(){
- openDialog(`<p class="eyebrow">ALLEEN VOOR BEHEERDERS</p><h2>Sitebeheer</h2><p class="muted">Log in met het beheerdersaccount dat in Firebase Authentication is aangemaakt.</p><form id="adminLoginForm" class="stack"><label>E-mailadres<input id="adminEmail" type="email" required autocomplete="username" value="${safe(BEHEER_CONFIG.adminEmail)}"></label><label>Wachtwoord<input id="adminPassword" type="password" required autocomplete="current-password"></label><button class="primary full">Inloggen als beheerder</button></form>`);
- $("#adminLoginForm").onsubmit=async e=>{
+ openDialog(`<p class="eyebrow">ALLEEN VOOR BEHEERDERS</p><h2>Sitebeheer</h2><p class="muted">Log in met de gegevens uit beheer-config.js.</p><form id="adminLoginForm" class="stack"><label>E-mailadres<input id="adminEmail" type="email" required autocomplete="username" value="${safe(BEHEER_CONFIG.adminEmail)}"></label><label>Wachtwoord<input id="adminPassword" type="password" required autocomplete="current-password"></label><button class="primary full">Inloggen als beheerder</button></form>`);
+ $("#adminLoginForm").onsubmit=e=>{
   e.preventDefault();
-  const email=$("#adminEmail").value.trim(),password=$("#adminPassword").value;
-  if(email.toLowerCase()!==BEHEER_CONFIG.adminEmail.toLowerCase()){toast("Dit e-mailadres is niet ingesteld als beheerder");return}
-  try{
-   const credential=await signInWithEmailAndPassword(auth,email,password);
-   if(!isAdmin(credential.user)){await signOut(auth);toast("Dit account heeft geen beheerrechten");return}
-   closeDialog();adminPanel();
-  }catch(err){toast(authError(err))}
+  const email=$("#adminEmail").value.trim().toLowerCase(),password=$("#adminPassword").value;
+  if(email!==BEHEER_CONFIG.adminEmail.toLowerCase()||password!==BEHEER_CONFIG.adminPassword){toast("E-mailadres of wachtwoord klopt niet.");return}
+  state.user={uid:"admin",email,role:"admin",accountType:"admin"};state.admin=true;
+  sessionStorage.setItem("novashopUser",JSON.stringify(state.user));
+  closeDialog();adminPanel();
  };
 }
-onAuthStateChanged(auth,async user=>{
- state.user=user;state.admin=isAdmin(user);
- $("#accountBtn").textContent=user?"Mijn account":"Inloggen";
- $("#adminEntry").textContent=user&&state.admin?"Sitebeheer · ingelogd":"Sitebeheer";
- if(user){
-  try{
-   const profileRef=ref(db,"users/"+user.uid),profile=await get(profileRef);
-   if(!profile.exists())await set(profileRef,{email:user.email||"",createdAt:Date.now(),accountType:state.admin?"admin":"customer"});
-  }catch(err){console.warn("Accountprofiel kon niet worden opgeslagen:",err)}
- }
-});
+try{
+ const saved=JSON.parse(sessionStorage.getItem("novashopUser")||"null");
+ if(saved?.uid){state.user=saved;state.admin=saved.role==="admin";$("#accountBtn").textContent="Mijn account";}
+}catch{sessionStorage.removeItem("novashopUser")}
+$("#adminEntry").textContent=state.admin?"Sitebeheer · ingelogd":"Sitebeheer";

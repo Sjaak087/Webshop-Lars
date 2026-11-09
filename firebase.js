@@ -2,7 +2,6 @@
 // De Firebase web-API-key is bedoeld om in de browser te staan.
 // Beveilig je gegevens met Firebase Authentication en de meegeleverde database-/storage-regels.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
 
@@ -18,7 +17,5 @@ export const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-await setPersistence(auth, browserLocalPersistence);
 export const db = getDatabase(app);
 export const storage = getStorage(app);

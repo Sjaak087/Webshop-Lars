@@ -1,17 +1,20 @@
-# NovaShop
+# NovaShop - demo zonder Firebase Authentication
 
-## Accounts en beheerder
-- Firebase Authentication controleert veilig de e-mailadressen en wachtwoorden.
-- Accountprofielen worden opgeslagen in Realtime Database onder `users/{uid}` met e-mailadres, aanmaakdatum en accounttype.
-- Wachtwoorden worden bewust NIET opgeslagen in Realtime Database of in openbare JavaScript-bestanden.
-- Maak het beheerdersaccount aan via Firebase Console > Authentication > Users.
-- Zet het e-mailadres daarvan in `beheer-config.js` bij `adminEmail`.
-- Open Sitebeheer en log in met het e-mailadres en wachtwoord van dat Firebase Authentication-account.
+Deze demo gebruikt **Firebase Realtime Database**. Firebase Authentication wordt niet meer gebruikt.
 
-## Firebase instellen
-1. Controleer `firebase.js`.
-2. Publiceer `database.rules.json` in Firebase Realtime Database.
-3. Publiceer `storage.rules` in Firebase Storage.
-4. Schakel E-mail/wachtwoord in via Firebase Console > Authentication > Sign-in method.
+## Sitebeheer demo-inlog
+- E-mail: beheer@jouwdomein.nl
+- Wachtwoord: NovaShop123!
 
-De Firebase webconfiguratie en `beheer-config.js` zijn zichtbaar voor bezoekers van een statische website. Plaats daar nooit wachtwoorden of geheime sleutels in. De beveiliging wordt afgedwongen met Firebase Authentication en Firebase-regels.
+Pas deze gegevens aan in `beheer-config.js`.
+
+## Klantenaccounts
+Registratie en login lezen/schrijven klantprofielen onder `users` in Realtime Database. In deze speeldemo wordt het wachtwoord als gewone tekst opgeslagen.
+
+## LET OP
+Dit is bewust een onbeveiligde demo. `database.rules.json` en `storage.rules` staan volledig open. Iedereen kan gegevens lezen, wijzigen en verwijderen. Beheerdersgegevens staan in openbare JavaScript en zijn zichtbaar voor bezoekers. Gebruik geen echte klantgegevens of echte wachtwoorden en zet dit niet live als echte webshop.
+
+## Installatie
+1. Controleer de Firebase-configuratie in `firebase.js`.
+2. Publiceer `database.rules.json` bij Firebase Realtime Database.
+3. Publiceer `storage.rules` bij Firebase Storage als je productafbeeldingen wilt uploaden.
